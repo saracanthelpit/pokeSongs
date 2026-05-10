@@ -98,7 +98,10 @@
       <p class="staff-guide-hint">Find the note on your printed sheet music, hover the matching position on the staff below, then click to add it to your sequence. Covers C4 (Low Do ↑) through C6 (High Do ↓↓) — all 15 natural notes across two octaves.</p>
       <div class="staff-wrap">
         <svg id="staff-svg" class="staff-svg"></svg>
-        <div id="staff-status" class="staff-status">Hover over the staff to select a note, click to add</div>
+        <div class="staff-controls">
+          <div id="staff-status" class="staff-status">Hover over the staff to select a note, click to add</div>
+          <button class="btn-sm" id="sharp-btn">♯ Sharp</button>
+        </div>
       </div>
 
       <div class="composer">
@@ -243,6 +246,12 @@
     let   hoveredPitch  = null;
     let   chordMode     = false;
     let   pendingChord  = [];
+    let   sharpMode     = false;
+
+    const SHARP_MAP = {
+      'do': 'do-w', 're': 're-w', 'mi': 'mi-w', 'fa':  'fa-w',
+      'sol':'sol-w','la': 'la-w', 'ti': 'ti-w', 'do8': 'do8-w',
+    };
 
     function svgEl(tag, attrs) {
       const el = document.createElementNS(SVG_NS, tag);
@@ -274,42 +283,51 @@
           t.textContent = p.letter[0];
           staffSvg.appendChild(t);
 
-          const noteObj  = NOTE_BY_KEY[p.key];
-          const arrow    = DIR_ARROW[noteObj.dir];
-          const inChord  = pendingChord.includes(p.key);
-          const indG = svgEl('g', { class: 'staff-ind', style: 'cursor:pointer' });
-          const titleEl = svgEl('title', {});
-          titleEl.textContent = noteObj.name;
-          indG.appendChild(titleEl);
-          indG.appendChild(svgEl('circle', {
-            cx: 8, cy: ry + p.noteY, r: inChord ? '6.5' : '5.5',
-            fill: noteObj.color,
-            opacity: inChord ? '1' : '0.85',
-            stroke: inChord ? '#fff' : 'none',
-            'stroke-width': inChord ? '1.5' : '0'
-          }));
-          if (arrow) {
-            const at = svgEl('text', {
-              x: 8, y: ry + p.noteY + 3,
-              'text-anchor': 'middle', 'font-size': '6',
-              fill: '#111', 'pointer-events': 'none'
-            });
-            at.style.fontWeight = '800';
-            at.textContent = arrow;
-            indG.appendChild(at);
-          }
-          indG.addEventListener('click', evt => {
-            evt.stopPropagation();
-            if (chordMode) {
-              const idx = pendingChord.indexOf(p.key);
-              if (idx >= 0) pendingChord.splice(idx, 1);
-              else pendingChord.push(p.key);
-              updateChordStatus();
-              renderStaff();
-            } else {
-              appendToInput(noteObj.token);
+          const indKey   = sharpMode ? (SHARP_MAP[p.key] ?? null) : p.key;
+          const indG = svgEl('g', { class: 'staff-ind', style: indKey ? 'cursor:pointer' : 'cursor:default' });
+          if (indKey) {
+            const noteObj = NOTE_BY_KEY[indKey];
+            const arrow   = DIR_ARROW[noteObj.dir];
+            const inChord = pendingChord.includes(indKey);
+            const titleEl = svgEl('title', {});
+            titleEl.textContent = noteObj.name;
+            indG.appendChild(titleEl);
+            indG.appendChild(svgEl('circle', {
+              cx: 8, cy: ry + p.noteY, r: inChord ? '6.5' : '5.5',
+              fill: noteObj.color,
+              opacity: inChord ? '1' : '0.85',
+              stroke: inChord ? '#fff' : 'none',
+              'stroke-width': inChord ? '1.5' : '0'
+            }));
+            if (arrow) {
+              const at = svgEl('text', {
+                x: 8, y: ry + p.noteY + 3,
+                'text-anchor': 'middle', 'font-size': '6',
+                fill: '#111', 'pointer-events': 'none'
+              });
+              at.style.fontWeight = '800';
+              at.textContent = arrow;
+              indG.appendChild(at);
             }
-          });
+            indG.addEventListener('click', evt => {
+              evt.stopPropagation();
+              if (chordMode) {
+                const idx = pendingChord.indexOf(indKey);
+                if (idx >= 0) pendingChord.splice(idx, 1);
+                else pendingChord.push(indKey);
+                updateChordStatus();
+                renderStaff();
+              } else {
+                appendToInput(noteObj.token);
+              }
+            });
+          } else {
+            // No sharp for this position — dim dot
+            indG.appendChild(svgEl('circle', {
+              cx: 8, cy: ry + p.noteY, r: '4',
+              fill: 'var(--surface-2)', opacity: '0.4'
+            }));
+          }
           staffSvg.appendChild(indG);
         });
 
@@ -444,13 +462,20 @@
       const pitch = nearestPitch(staffSvgY(evt));
       if (pitch === hoveredPitch) return;
       hoveredPitch = pitch;
-      const mat = NOTE_BY_KEY[pitch.key];
+      const activeKey = sharpMode ? (SHARP_MAP[pitch.key] ?? null) : pitch.key;
+      const mat = activeKey ? NOTE_BY_KEY[activeKey] : null;
       updateStaffGhost(pitch);
-      if (!chordMode) {
-        staffStatus.innerHTML = `<span style="color:${mat.color};font-weight:700;font-style:normal">${mat.chipLabel}</span> · ${pitch.letter} · click to add`;
+      if (mat) {
+        const ghostHead = staffSvg.querySelector('#staff-ghost-head');
+        if (ghostHead) ghostHead.setAttribute('fill', mat.color);
+        if (!chordMode) {
+          staffStatus.innerHTML = `<span style="color:${mat.color};font-weight:700;font-style:normal">${mat.chipLabel}</span> · ${pitch.letter}${sharpMode ? '♯' : ''} · click to add`;
+        }
+      } else if (sharpMode) {
+        if (!chordMode) staffStatus.textContent = 'No sharp for this note';
       }
       staffSvg.querySelectorAll('[data-skey]').forEach(el => {
-        el.style.fill = el.dataset.skey === pitch.key ? mat.color : '';
+        el.style.fill = el.dataset.skey === pitch.key ? (mat?.color ?? '') : '';
       });
     });
 
@@ -465,15 +490,16 @@
     staffSvg.addEventListener('click', evt => {
       if (evt.target.closest('.staff-ind')) return;
       if (!hoveredPitch) return;
+      const key = sharpMode ? (SHARP_MAP[hoveredPitch.key] ?? null) : hoveredPitch.key;
+      if (!key) return;
       if (chordMode) {
-        const key = hoveredPitch.key;
         const idx = pendingChord.indexOf(key);
         if (idx >= 0) pendingChord.splice(idx, 1);
         else pendingChord.push(key);
         updateChordStatus();
         renderStaff();
       } else {
-        appendToInput(NOTE_BY_KEY[hoveredPitch.key].token);
+        appendToInput(NOTE_BY_KEY[key].token);
       }
     });
 
@@ -599,6 +625,16 @@
       }
       updateChordStatus();
       renderStaff();
+    });
+
+    document.getElementById('sharp-btn').addEventListener('click', () => {
+      sharpMode = !sharpMode;
+      const btn = document.getElementById('sharp-btn');
+      btn.classList.toggle('chord-active', sharpMode);
+      renderStaff();
+      if (!chordMode) staffStatus.textContent = sharpMode
+        ? '♯ Sharp mode: click a note to add its sharp'
+        : 'Hover over the staff to select a note, click to add';
     });
 
     document.getElementById('add-rest-btn').addEventListener('click', () => appendToInput('rest'));
