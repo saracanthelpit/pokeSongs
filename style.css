@@ -1,0 +1,572 @@
+:root {
+  --blue-dark:   #2d6b0e;
+  --blue-mid:    #4e9a1c;
+  --blue-light:  #6dbf2a;
+  --yellow:      #f5c518;
+  --yellow-soft: #fde98a;
+  --bg:          #f5edda;
+  --surface:     #fdf7e8;
+  --surface-2:   #ddc98a;
+  --text:        #2a1a08;
+  --text-muted:  #7a5830;
+  --radius:      12px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ── Header ─────────────────────────────────────── */
+header {
+  background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue-mid) 100%);
+  border-bottom: 3px solid var(--yellow);
+  padding: 2rem 1.5rem 1.5rem;
+  text-align: center;
+}
+
+header h1 {
+  font-size: clamp(1.6rem, 4vw, 2.6rem);
+  font-weight: 800;
+  color: var(--yellow);
+  letter-spacing: 0.02em;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+header p {
+  margin-top: 0.5rem;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 1rem;
+  max-width: 560px;
+  margin-inline: auto;
+  line-height: 1.5;
+}
+
+/* ── Main layout ─────────────────────────────────── */
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+}
+
+section + section {
+  margin-top: 2.5rem;
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--blue-light);
+  margin-bottom: 1rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--surface-2);
+}
+
+/* ── Mat grid ────────────────────────────────────── */
+.mat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 1rem;
+}
+
+.mat-card {
+  background: var(--surface);
+  border: 2px solid var(--surface-2);
+  border-radius: var(--radius);
+  padding: 1rem 0.5rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: default;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.mat-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--yellow);
+  box-shadow: 0 6px 20px rgba(245, 197, 24, 0.2);
+}
+
+.mat-card img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.mat-solfege {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--yellow);
+  line-height: 1;
+}
+
+.mat-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.3;
+}
+
+/* ── Song select dropdown ────────────────────────── */
+#song-select {
+  width: 100%;
+  padding: 0.6rem 0.9rem;
+  margin-bottom: 1rem;
+  background: var(--surface);
+  color: var(--text);
+  border: 2px solid var(--surface-2);
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  font-family: inherit;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238ab2cc' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.9rem center;
+  padding-right: 2.2rem;
+}
+
+#song-select:focus {
+  outline: none;
+  border-color: var(--yellow);
+}
+
+/* ── Song cards ──────────────────────────────────── */
+.song-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.song-card {
+  background: var(--surface);
+  border: 2px solid var(--surface-2);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+.song-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 0.75rem;
+}
+
+.note-sequence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.note-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.1rem;
+  height: 2.1rem;
+  padding: 0 0.4rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #111;
+  letter-spacing: 0.01em;
+  user-select: none;
+}
+
+.chord {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.note-rest {
+  display: inline-block;
+  width: 0.9rem;
+  height: 2.1rem;
+  position: relative;
+}
+
+.note-rest::after {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  opacity: 0.5;
+}
+
+/* ── Sub-section label ───────────────────────────── */
+.sub-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin: 2rem 0 0.75rem;
+}
+
+/* ── Composer ────────────────────────────────────── */
+.composer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.composer-mats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.composer-group-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-top: 0.35rem;
+}
+
+.composer-mat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.composer-mat-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.5rem 0.6rem;
+  background: var(--surface);
+  border: 2px solid var(--surface-2);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: border-color 0.12s, transform 0.1s, box-shadow 0.12s;
+  min-width: 60px;
+}
+
+.composer-mat-btn:hover {
+  border-color: var(--mat-color, var(--yellow));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--mat-color, var(--yellow)) 40%, transparent);
+  transform: translateY(-2px);
+}
+
+.composer-mat-btn:active {
+  transform: translateY(1px);
+}
+
+.composer-mat-btn img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.composer-mat-btn span {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--mat-color, var(--text-muted));
+  white-space: nowrap;
+}
+
+.composer-input-wrap {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+#note-input {
+  flex: 1;
+  background: var(--surface);
+  color: var(--text);
+  border: 2px solid var(--surface-2);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  resize: vertical;
+  min-height: 80px;
+  transition: border-color 0.15s;
+}
+
+#note-input:focus {
+  outline: none;
+  border-color: var(--yellow);
+}
+
+#note-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.composer-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.btn-sm {
+  background: var(--surface);
+  color: var(--text-muted);
+  border: 1px solid var(--surface-2);
+  border-radius: 6px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8rem;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.12s, color 0.12s;
+}
+
+.btn-sm:hover {
+  border-color: var(--blue-light);
+  color: var(--text);
+}
+
+.chip-dir {
+  font-size: 0.72em;
+  margin-left: 2px;
+  opacity: 0.9;
+  vertical-align: top;
+  line-height: 1.7;
+}
+
+.note-chip.clickable {
+  cursor: pointer;
+  transition: transform 0.1s, filter 0.1s, box-shadow 0.1s;
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.25);
+}
+
+.note-chip.clickable:hover {
+  transform: translateY(-3px) scale(1.12);
+  filter: brightness(1.25);
+  box-shadow: 0 4px 12px rgba(255,255,255,0.35);
+}
+
+.note-chip.chip-added {
+  transform: scale(0.85);
+  filter: brightness(1.6);
+  box-shadow: 0 0 0 3px #fff;
+}
+
+.click-hint {
+  font-size: 0.8rem;
+  color: var(--blue-light);
+  font-style: italic;
+  margin-bottom: 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.note-invalid {
+  background: #fde8e6 !important;
+  color: #c0392b !important;
+  border: 1px solid #e57373;
+}
+
+/* ── MusicXML import ─────────────────────────────── */
+.musicxml-import {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.import-hint {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.import-hint strong { color: var(--text); }
+
+.file-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1.75rem 1rem;
+  background: var(--surface);
+  border: 2px dashed var(--surface-2);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  color: var(--text-muted);
+}
+
+.file-drop:hover,
+.file-drop.drag-over {
+  border-color: var(--yellow);
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.file-drop input[type="file"] {
+  display: none;
+}
+
+#file-drop-text {
+  font-size: 0.875rem;
+}
+
+.ms-status {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  padding: 0.6rem 0.8rem;
+  border-radius: 6px;
+  display: none;
+}
+
+.ms-status:not(:empty) { display: block; }
+
+.ms-loading { color: var(--text-muted); background: var(--surface); }
+.ms-ok      { color: #2d7a1a; background: #d4f0c0; }
+.ms-warn    { color: #7a5a00; background: #fff3b0; }
+.ms-error   { color: #c0392b; background: #fde8e6; }
+
+/* ── Rotation guide ──────────────────────────────── */
+.rotation-guide {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.rotation-intro {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.rot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.6rem;
+}
+
+.rot-card {
+  background: var(--surface-2);
+  border-radius: 8px;
+  padding: 0.7rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.rot-arrow {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--yellow);
+  min-width: 1.4rem;
+  text-align: center;
+  line-height: 1;
+}
+
+.rot-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.rot-info strong {
+  font-size: 0.82rem;
+  color: var(--text);
+}
+
+.rot-info span {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.compat-notes {
+  list-style: none;
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border-radius: 8px;
+  border-left: 3px solid var(--blue-light);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.compat-notes li {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.compat-notes li strong { color: var(--text); }
+
+/* ── Staff (sheet music) input ──────────────────── */
+.staff-guide-hint {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 0.75rem;
+}
+
+.staff-wrap {
+  background: var(--surface);
+  border: 2px solid var(--surface-2);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem 0.5rem;
+  transition: border-color 0.15s;
+}
+
+.staff-wrap:hover {
+  border-color: var(--blue-light);
+}
+
+.staff-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  cursor: crosshair;
+}
+
+.staff-line {
+  stroke: var(--text-muted);
+  stroke-width: 1.2;
+}
+
+.staff-ledger-ref {
+  stroke: var(--text-muted);
+  stroke-width: 1;
+  opacity: 0.3;
+}
+
+.staff-letter {
+  font-size: 8px;
+  fill: var(--text-muted);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.staff-sol-label {
+  font-size: 7.5px;
+  fill: var(--text-muted);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.staff-status {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  padding: 0.35rem 0 0.1rem;
+  min-height: 1.6rem;
+  font-style: italic;
+}

@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pokopia Song Converter</title>
+  <link rel="stylesheet" href="style.css?v=2" />
+  <style>
+    .note-chip.clickable {
+      cursor: pointer;
+      box-shadow: 0 0 0 2px rgba(0,0,0,0.2);
+      transition: transform 0.1s, filter 0.1s, box-shadow 0.1s;
+    }
+    .note-chip.clickable:hover {
+      transform: translateY(-3px) scale(1.12);
+      filter: brightness(1.1);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    }
+    .note-chip.chip-added {
+      transform: scale(0.85);
+      filter: brightness(1.3);
+      box-shadow: 0 0 0 3px rgba(0,0,0,0.35);
+    }
+    .click-hint {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.8rem;
+      color: #5ba3d9;
+      font-style: italic;
+      margin-bottom: 0.6rem;
+    }
+    .staff-ind circle { transition: opacity 0.1s, r 0.1s; }
+    .staff-ind:hover circle { opacity: 1 !important; r: 6.5; }
+    .btn-sm.chord-active { border-color: var(--yellow); color: var(--yellow); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Pokopia Song Converter</h1>
+    <p>Convert songs into Music Mat sequences for the Nintendo Switch 2 game Pokopia.
+       Arrange the mats on your floor and run across them to play the song!</p>
+  </header>
+
+  <main>
+    <section>
+      <h2 class="section-title">Music Mats</h2>
+      <div class="mat-grid" id="mat-grid"></div>
+    </section>
+
+    <section>
+      <h2 class="section-title">Sample Songs</h2>
+      <select id="song-select"></select>
+      <div class="song-list" id="song-list"></div>
+    </section>
+
+    <section>
+      <h2 class="section-title">Song Converter</h2>
+
+      <div class="rotation-guide">
+        <p class="rotation-intro">Each mat can face any of four directions, giving access to the <strong>full chromatic scale across two octaves</strong>. Nearly any song can be played.</p>
+        <div class="rot-grid">
+          <div class="rot-card">
+            <span class="rot-arrow">↑</span>
+            <div class="rot-info">
+              <strong>North — Natural note</strong>
+              <span>C4 through B4 (Low Do → Ti)</span>
+            </div>
+          </div>
+          <div class="rot-card">
+            <span class="rot-arrow">←</span>
+            <div class="rot-info">
+              <strong>West — Sharp (+½ step)</strong>
+              <span>C♯ D♯ F♯ G♯ A♯ (the five black keys)</span>
+            </div>
+          </div>
+          <div class="rot-card">
+            <span class="rot-arrow">↓</span>
+            <div class="rot-info">
+              <strong>South — High octave</strong>
+              <span>D5 through B5 (Re′ → Ti′)</span>
+            </div>
+          </div>
+          <div class="rot-card">
+            <span class="rot-arrow">→</span>
+            <div class="rot-info">
+              <strong>East — Flat (−½ step)</strong>
+              <span>Same pitches as West, approached from above</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <p class="sub-label">Read from sheet music</p>
+      <p class="staff-guide-hint">Find the note on your printed sheet music, hover the matching position on the staff below, then click to add it to your sequence. Covers C4 (Low Do ↑) through C6 (High Do ↓↓) — all 15 natural notes across two octaves.</p>
+      <div class="staff-wrap">
+        <svg id="staff-svg" class="staff-svg"></svg>
+        <div id="staff-status" class="staff-status">Hover over the staff to select a note, click to add</div>
+      </div>
+
+      <div class="composer">
+        <div class="composer-input-wrap">
+          <textarea id="note-input" spellcheck="false"
+            placeholder="Click staff dots or type note names here&#10;Natural: Do Re Mi Fa Sol La Ti Do8  |  Sharps: Fa# Sol# La# Do# Re#&#10;High octave: Re2 Mi2 Fa2 Sol2 La2 Ti2  |  Rest: &quot;-&quot; or &quot;rest&quot;"></textarea>
+          <div class="composer-controls">
+            <button class="btn-sm" id="chord-btn">+ Chord</button>
+            <button class="btn-sm" id="add-rest-btn">+ Rest</button>
+            <button class="btn-sm" id="clear-btn">Clear</button>
+          </div>
+        </div>
+        <div class="note-sequence" id="composer-preview"></div>
+      </div>
+
+      <p class="sub-label">Import from MusicXML</p>
+      <div class="musicxml-import">
+        <p class="import-hint">In MuseScore 4: <strong>File → Export → Uncompressed MusicXML (.xml)</strong></p>
+        <label class="file-drop" id="file-drop" for="xml-file-input">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span id="file-drop-text">Drop .xml file here or click to browse</span>
+          <input type="file" id="xml-file-input" accept=".xml" />
+        </label>
+        <div id="xml-status" class="ms-status"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    const MAT_BY_KEY  = Object.fromEntries(MATS.map(m => [m.key, m]));
+    const NOTE_BY_KEY = Object.fromEntries(NOTES.map(n => [n.key, n]));
+    const MAT_IMAGE   = Object.fromEntries(MATS.map(m => [m.key, m.image]));
+    const DIR_ARROW   = { N: '', W: '←', S: '↓', E: '→' };
+
+    function chipHtml(note, extra = '', hint = '') {
+      const arrow = DIR_ARROW[note.dir]
+        ? `<span class="chip-dir">${DIR_ARROW[note.dir]}</span>` : '';
+      return `<span class="note-chip${extra}" style="background:${note.color}"
+                title="${hint || note.name}" data-key="${note.key}">${note.chipLabel}${arrow}</span>`;
+    }
+
+    // ── Shared note renderer ──────────────────────────
+    function renderNote(entry, clickable = false) {
+      const extra = clickable ? ' clickable' : '';
+      const hint  = clickable ? 'Click to add to sequence' : '';
+      if (entry === null) return `<span class="note-rest"></span>`;
+      if (Array.isArray(entry)) {
+        const sorted = [...entry].sort((a, b) => NOTE_BY_KEY[b].midi - NOTE_BY_KEY[a].midi);
+        return `<div class="chord">${sorted.map(k => chipHtml(NOTE_BY_KEY[k], extra, hint)).join('')}</div>`;
+      }
+      return chipHtml(NOTE_BY_KEY[entry], extra, hint);
+    }
+
+    // ── Mat reference grid ────────────────────────────
+    const grid = document.getElementById('mat-grid');
+    MATS.forEach(mat => {
+      const card = document.createElement('div');
+      card.className = 'mat-card';
+      card.innerHTML = `
+        <img src="${mat.image}" alt="${mat.name}" />
+        <span class="mat-solfege" style="color:${mat.color}">${mat.solfege}</span>
+        <span class="mat-label">${mat.label}</span>
+      `;
+      grid.appendChild(card);
+    });
+
+    // ── Sample songs ──────────────────────────────────
+    const songSelect = document.getElementById('song-select');
+    const songList   = document.getElementById('song-list');
+
+    SONGS.forEach((song, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = song.title;
+      songSelect.appendChild(opt);
+    });
+
+    function renderSong(index) {
+      const song = SONGS[index];
+      const seq = song.notes.map(n => renderNote(n, true)).join('');
+      songList.innerHTML = `
+        <div class="song-card">
+          <p class="click-hint">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M10 14L21 3M21 21H3V3"/></svg>
+            Click any note chip to add it to your sequence below
+          </p>
+          <div class="note-sequence">${seq}</div>
+        </div>`;
+    }
+
+    songList.addEventListener('click', e => {
+      const chip = e.target.closest('.note-chip[data-key]');
+      if (!chip) return;
+      appendToInput(NOTE_BY_KEY[chip.dataset.key].token);
+      chip.classList.add('chip-added');
+      setTimeout(() => chip.classList.remove('chip-added'), 250);
+    });
+
+    songSelect.addEventListener('change', () => renderSong(+songSelect.value));
+    renderSong(0);
+
+    // ── Staff (sheet music pitch input) ──────────────
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+    const S_ROW_H        = 128;  // taller to fit 2-octave range
+    const S_NOTES_PER_ROW = 11;
+    const S_NOTE_X0      = 44;
+    const S_NOTE_DX      = 24;
+    const S_STAFF_X1     = 26;
+    const S_STAFF_X2     = 308;
+    const S_SOL_LABEL_X  = 315;
+
+    // All 15 natural notes, C4–C6. Staff lines are now at y=35,49,63,77,91
+    // (treble clef: F5 D5 B4 G4 E4, top→bottom). Ledger lines: A5(21), C4(105), C6(7+21).
+    const STAFF_PITCHES = [
+      { key: 'do8-s', noteY: 7,   letter: 'C6', solLabel: "Do''" },
+      { key: 'ti-s',  noteY: 14,  letter: 'B5', solLabel: "Ti'"  },
+      { key: 'la-s',  noteY: 21,  letter: 'A5', solLabel: "La'"  },
+      { key: 'sol-s', noteY: 28,  letter: 'G5', solLabel: "Sol'" },
+      { key: 'fa-s',  noteY: 35,  letter: 'F5', solLabel: "Fa'"  },
+      { key: 'mi-s',  noteY: 42,  letter: 'E5', solLabel: "Mi'"  },
+      { key: 're-s',  noteY: 49,  letter: 'D5', solLabel: "Re'"  },
+      { key: 'do8',   noteY: 56,  letter: 'C5', solLabel: 'High Do' },
+      { key: 'ti',    noteY: 63,  letter: 'B4', solLabel: 'Ti'   },
+      { key: 'la',    noteY: 70,  letter: 'A4', solLabel: 'La'   },
+      { key: 'sol',   noteY: 77,  letter: 'G4', solLabel: 'Sol'  },
+      { key: 'fa',    noteY: 84,  letter: 'F4', solLabel: 'Fa'   },
+      { key: 'mi',    noteY: 91,  letter: 'E4', solLabel: 'Mi'   },
+      { key: 're',    noteY: 98,  letter: 'D4', solLabel: 'Re'   },
+      { key: 'do',    noteY: 105, letter: 'C4', solLabel: 'Low Do' },
+    ];
+
+    // Ledger lines drawn for notes outside the 5-line staff
+    const STAFF_LEDGERS = {
+      'do8-s': [7, 21],  // C6: two ledger lines above
+      'la-s':  [21],     // A5: one ledger line above
+      'do':    [105],    // C4: one ledger line below
+    };
+
+    const staffSvg    = document.getElementById('staff-svg');
+    const staffStatus = document.getElementById('staff-status');
+    let   hoveredPitch  = null;
+    let   chordMode     = false;
+    let   pendingChord  = [];
+
+    function svgEl(tag, attrs) {
+      const el = document.createElementNS(SVG_NS, tag);
+      for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+      return el;
+    }
+
+    function getStaffNotes() {
+      return parseInputText(noteInput.value).filter(n => !(n && !Array.isArray(n) && typeof n === 'object'));
+    }
+
+    function renderStaff() {
+      const notes      = getStaffNotes();
+      const total      = notes.length;
+      const cursorRow  = Math.floor(total / S_NOTES_PER_ROW);
+      const cursorCol  = total % S_NOTES_PER_ROW;
+      const rows       = cursorRow + 1;
+      const totalH     = rows * S_ROW_H + 4;
+
+      staffSvg.setAttribute('viewBox', `0 0 400 ${totalH}`);
+      staffSvg.innerHTML = '';
+
+      for (let row = 0; row < rows; row++) {
+        const ry = row * S_ROW_H;
+
+        // Letter labels + clickable mat indicators (left side of each row)
+        STAFF_PITCHES.forEach(p => {
+          const t = svgEl('text', { class: 'staff-letter', 'text-anchor': 'end', x: 22, y: ry + p.noteY + 3 });
+          t.textContent = p.letter[0];
+          staffSvg.appendChild(t);
+
+          const noteObj  = NOTE_BY_KEY[p.key];
+          const arrow    = DIR_ARROW[noteObj.dir];
+          const inChord  = pendingChord.includes(p.key);
+          const indG = svgEl('g', { class: 'staff-ind', style: 'cursor:pointer' });
+          const titleEl = svgEl('title', {});
+          titleEl.textContent = noteObj.name;
+          indG.appendChild(titleEl);
+          indG.appendChild(svgEl('circle', {
+            cx: 8, cy: ry + p.noteY, r: inChord ? '6.5' : '5.5',
+            fill: noteObj.color,
+            opacity: inChord ? '1' : '0.85',
+            stroke: inChord ? '#fff' : 'none',
+            'stroke-width': inChord ? '1.5' : '0'
+          }));
+          if (arrow) {
+            const at = svgEl('text', {
+              x: 8, y: ry + p.noteY + 3,
+              'text-anchor': 'middle', 'font-size': '6',
+              fill: '#111', 'pointer-events': 'none'
+            });
+            at.style.fontWeight = '800';
+            at.textContent = arrow;
+            indG.appendChild(at);
+          }
+          indG.addEventListener('click', evt => {
+            evt.stopPropagation();
+            if (chordMode) {
+              const idx = pendingChord.indexOf(p.key);
+              if (idx >= 0) pendingChord.splice(idx, 1);
+              else pendingChord.push(p.key);
+              updateChordStatus();
+              renderStaff();
+            } else {
+              appendToInput(noteObj.token);
+            }
+          });
+          staffSvg.appendChild(indG);
+        });
+
+        // 5 staff lines: F5 D5 B4 G4 E4 (top→bottom)
+        [35, 49, 63, 77, 91].forEach(ly => {
+          staffSvg.appendChild(svgEl('line', {
+            x1: S_STAFF_X1, y1: ry + ly, x2: S_STAFF_X2, y2: ry + ly, class: 'staff-line'
+          }));
+        });
+
+        // Solfège reference labels (first row only)
+        if (row === 0) {
+          STAFF_PITCHES.forEach(p => {
+            const t = svgEl('text', { class: 'staff-sol-label', 'data-skey': p.key, x: S_SOL_LABEL_X, y: p.noteY + 3 });
+            t.textContent = p.solLabel;
+            staffSvg.appendChild(t);
+          });
+        }
+
+        // Notes in this row
+        const rowStart = row * S_NOTES_PER_ROW;
+        const rowEnd   = Math.min(rowStart + S_NOTES_PER_ROW, total);
+        for (let i = rowStart; i < rowEnd; i++) {
+          const col = i - rowStart;
+          const nx  = S_NOTE_X0 + col * S_NOTE_DX;
+          const n   = notes[i];
+
+          if (n === null) {
+            // Rest: small filled rect on 4th line
+            staffSvg.appendChild(svgEl('rect', {
+              x: nx - 4, y: ry + 25, width: 8, height: 6,
+              fill: 'var(--text-muted)', opacity: '0.5'
+            }));
+          } else {
+            const keys = Array.isArray(n) ? n : [n];
+            keys.forEach(key => {
+              const pitch = STAFF_PITCHES.find(p => p.key === key);
+              if (!pitch) return;
+              const mat = NOTE_BY_KEY[key];
+              const ny  = ry + pitch.noteY;
+              (STAFF_LEDGERS[key] ?? []).forEach(ly => {
+                staffSvg.appendChild(svgEl('line', {
+                  x1: nx - 9, y1: ry + ly, x2: nx + 9, y2: ry + ly,
+                  stroke: 'var(--text-muted)', 'stroke-width': '1.2'
+                }));
+              });
+              staffSvg.appendChild(svgEl('ellipse', {
+                cx: nx, cy: ny, rx: 7, ry: 5, fill: mat.color, opacity: '0.9'
+              }));
+              const arrow = DIR_ARROW[mat.dir];
+              if (arrow) {
+                const arrowEl = svgEl('text', {
+                  x: nx, y: ny + 3,
+                  'text-anchor': 'middle', 'font-size': '7',
+                  fill: '#111', 'pointer-events': 'none'
+                });
+                arrowEl.style.fontWeight = '800';
+                arrowEl.textContent = arrow;
+                staffSvg.appendChild(arrowEl);
+              }
+            });
+          }
+        }
+
+        // Yellow dashed cursor line (last row, at next-note column)
+        if (row === rows - 1) {
+          const cx = S_NOTE_X0 + cursorCol * S_NOTE_DX;
+          staffSvg.appendChild(svgEl('line', {
+            id: 'staff-cursor',
+            x1: cx, y1: ry + 6, x2: cx, y2: ry + S_ROW_H - 6,
+            stroke: 'var(--yellow)', 'stroke-width': '1.5',
+            'stroke-dasharray': '4 3', opacity: '0.65'
+          }));
+        }
+      }
+
+      // Ghost note group — always drawn last so it's on top
+      const ghostGroup = svgEl('g', { id: 'staff-ghost', style: 'display:none', 'pointer-events': 'none' });
+      ghostGroup.appendChild(svgEl('line', {
+        id: 'staff-ghost-ledger', x1: 0, y1: 0, x2: 0, y2: 0,
+        stroke: 'rgba(0,0,0,0.4)', 'stroke-width': '1.5', style: 'display:none'
+      }));
+      ghostGroup.appendChild(svgEl('ellipse', {
+        id: 'staff-ghost-head', cx: S_NOTE_X0, cy: 35, rx: 7, ry: 5, opacity: '0.85'
+      }));
+      staffSvg.appendChild(ghostGroup);
+
+      // Transparent hit area (full staff width, full height)
+      staffSvg.appendChild(svgEl('rect', {
+        id: 'staff-hit', x: S_STAFF_X1, y: 0,
+        width: S_STAFF_X2 - S_STAFF_X1, height: totalH,
+        fill: 'transparent', style: 'cursor:crosshair'
+      }));
+
+      // Re-show ghost if user is still hovering
+      if (hoveredPitch) updateStaffGhost(hoveredPitch);
+    }
+
+    function staffSvgY(evt) {
+      const r      = staffSvg.getBoundingClientRect();
+      const totalH = parseInt(staffSvg.getAttribute('viewBox').split(' ')[3]);
+      return (evt.clientY - r.top) * (totalH / r.height);
+    }
+
+    function nearestPitch(yVB) {
+      const localY = yVB % S_ROW_H;
+      return STAFF_PITCHES.reduce((best, p) =>
+        Math.abs(p.noteY - localY) < Math.abs(best.noteY - localY) ? p : best
+      );
+    }
+
+    function updateStaffGhost(pitch) {
+      const ghostGroup  = staffSvg.querySelector('#staff-ghost');
+      const ghostHead   = staffSvg.querySelector('#staff-ghost-head');
+      const ghostLedger = staffSvg.querySelector('#staff-ghost-ledger');
+      if (!ghostGroup) return;
+
+      const notes      = getStaffNotes();
+      const cursorRow  = Math.floor(notes.length / S_NOTES_PER_ROW);
+      const cursorCol  = notes.length % S_NOTES_PER_ROW;
+      const ghostX     = S_NOTE_X0 + cursorCol * S_NOTE_DX;
+      const ghostY     = cursorRow * S_ROW_H + pitch.noteY;
+      const mat        = NOTE_BY_KEY[pitch.key];
+
+      ghostGroup.style.display = '';
+      ghostHead.setAttribute('cx', ghostX);
+      ghostHead.setAttribute('cy', ghostY);
+      ghostHead.setAttribute('fill', mat.color);
+
+      const ledgerYs = STAFF_LEDGERS[pitch.key];
+      ghostLedger.style.display = ledgerYs ? '' : 'none';
+      if (ledgerYs) {
+        // Show ledger at the note's own position (first/only ledger line)
+        const ly = cursorRow * S_ROW_H + ledgerYs[0];
+        ghostLedger.setAttribute('x1', ghostX - 9);
+        ghostLedger.setAttribute('x2', ghostX + 9);
+        ghostLedger.setAttribute('y1', ly);
+        ghostLedger.setAttribute('y2', ly);
+      }
+    }
+
+    staffSvg.addEventListener('mousemove', evt => {
+      const pitch = nearestPitch(staffSvgY(evt));
+      if (pitch === hoveredPitch) return;
+      hoveredPitch = pitch;
+      const mat = NOTE_BY_KEY[pitch.key];
+      updateStaffGhost(pitch);
+      if (!chordMode) {
+        staffStatus.innerHTML = `<span style="color:${mat.color};font-weight:700;font-style:normal">${mat.chipLabel}</span> · ${pitch.letter} · click to add`;
+      }
+      staffSvg.querySelectorAll('[data-skey]').forEach(el => {
+        el.style.fill = el.dataset.skey === pitch.key ? mat.color : '';
+      });
+    });
+
+    staffSvg.addEventListener('mouseleave', () => {
+      hoveredPitch = null;
+      const ghostGroup = staffSvg.querySelector('#staff-ghost');
+      if (ghostGroup) ghostGroup.style.display = 'none';
+      if (!chordMode) staffStatus.textContent = 'Hover over the staff to select a note, click to add';
+      staffSvg.querySelectorAll('[data-skey]').forEach(el => { el.style.fill = ''; });
+    });
+
+    staffSvg.addEventListener('click', evt => {
+      if (evt.target.closest('.staff-ind')) return;
+      if (!hoveredPitch) return;
+      if (chordMode) {
+        const key = hoveredPitch.key;
+        const idx = pendingChord.indexOf(key);
+        if (idx >= 0) pendingChord.splice(idx, 1);
+        else pendingChord.push(key);
+        updateChordStatus();
+        renderStaff();
+      } else {
+        appendToInput(NOTE_BY_KEY[hoveredPitch.key].token);
+      }
+    });
+
+    // ── Composer: click + type ────────────────────────
+    const NOTE_MAP = {
+      // Natural notes
+      'do': 'do',  'c': 'do',
+      're': 're',  'd': 're',
+      'mi': 'mi',  'e': 'mi',
+      'fa': 'fa',  'f': 'fa',
+      'sol': 'sol', 'so': 'sol', 'g': 'sol',
+      'la': 'la',  'a': 'la',
+      'ti': 'ti',  'si': 'ti', 'b': 'ti',
+      'do8': 'do8', "do'": 'do8', 'c8': 'do8', 'c5': 'do8',
+      // Rests
+      'r': null, 'rest': null, '-': null,
+      // Sharps (West ←)  — also accept flat spellings that land on same pitch
+      'do#': 'do-w',   'c#': 'do-w',   'db': 'do-w',
+      're#': 're-w',   'd#': 're-w',   'eb': 're-w',
+      'mi#': 'mi-w',   'e#': 'mi-w',
+      'fa#': 'fa-w',   'f#': 'fa-w',   'gb': 'fa-w',
+      'sol#': 'sol-w', 'g#': 'sol-w',  'ab': 'sol-w',
+      'la#': 'la-w',   'a#': 'la-w',   'bb': 'la-w',
+      'ti#': 'ti-w',   'b#': 'ti-w',
+      'do8#': 'do8-w', 'c#5': 'do8-w',
+      // High octave (South ↓)
+      'do2':  'do-s',
+      're2':  're-s',  "re'": 're-s',  'd5': 're-s',
+      'mi2':  'mi-s',  "mi'": 'mi-s',  'e5': 'mi-s',
+      'fa2':  'fa-s',  "fa'": 'fa-s',  'f5': 'fa-s',
+      'sol2': 'sol-s', "sol'": 'sol-s', 'g5': 'sol-s',
+      'la2':  'la-s',  "la'": 'la-s',  'a5': 'la-s',
+      'ti2':  'ti-s',  "ti'": 'ti-s',  'b5': 'ti-s',
+      'do82': 'do8-s',
+    };
+
+
+    const noteInput      = document.getElementById('note-input');
+    const composerPreview = document.getElementById('composer-preview');
+
+    function appendToInput(token) {
+      const current = noteInput.value.trimEnd();
+      noteInput.value = current ? current + ' ' + token : token;
+      updateComposerPreview();
+      noteInput.focus();
+    }
+
+    function appendChordToInput(keys) {
+      if (keys.length === 0) return;
+      if (keys.length === 1) { appendToInput(NOTE_BY_KEY[keys[0]].token); return; }
+      const tokens = keys.map(k => NOTE_BY_KEY[k].token).join(' ');
+      const current = noteInput.value.trimEnd();
+      noteInput.value = current ? current + ' [' + tokens + ']' : '[' + tokens + ']';
+      updateComposerPreview();
+      noteInput.focus();
+    }
+
+    function updateChordStatus() {
+      const chordBtn = document.getElementById('chord-btn');
+      if (!chordMode) {
+        chordBtn.textContent = '+ Chord';
+        chordBtn.classList.remove('chord-active');
+        staffStatus.textContent = 'Hover over the staff to select a note, click to add';
+        return;
+      }
+      chordBtn.classList.add('chord-active');
+      if (pendingChord.length === 0) {
+        chordBtn.textContent = '+ Chord';
+        staffStatus.textContent = 'Chord mode: click notes to add to chord, click Add Chord to commit';
+      } else {
+        const labels = pendingChord.map(k => {
+          const n = NOTE_BY_KEY[k];
+          return n.chipLabel + (DIR_ARROW[n.dir] || '');
+        }).join(' + ');
+        staffStatus.innerHTML = `Chord: <strong style="color:var(--yellow)">${labels}</strong> · click more or Add Chord`;
+        chordBtn.textContent = '✓ Add Chord';
+      }
+    }
+
+    function parseInputText(text) {
+      const results = [];
+      const rx = /\[([^\]]*)\]|[^\s,\[\]]+/g;
+      let m;
+      while ((m = rx.exec(text)) !== null) {
+        if (m[0].startsWith('[')) {
+          const keys = m[1].trim().split(/[\s,]+/).filter(Boolean).map(tok => {
+            const k = NOTE_MAP[tok.toLowerCase()];
+            return k !== undefined ? k : null;
+          }).filter(k => k !== null);
+          if (keys.length > 0) results.push(keys);
+        } else {
+          const lower = m[0].toLowerCase();
+          if (lower in NOTE_MAP) results.push(NOTE_MAP[lower]);
+          else results.push({ invalid: m[0] });
+        }
+      }
+      return results;
+    }
+
+    function updateComposerPreview() {
+      const notes = parseInputText(noteInput.value);
+      composerPreview.innerHTML = notes.map(n => {
+        if (n && !Array.isArray(n) && typeof n === 'object') {
+          return `<span class="note-chip note-invalid" title="Unrecognized">${n.invalid}</span>`;
+        }
+        return renderNote(n);
+      }).join('');
+      renderStaff();
+    }
+
+    noteInput.addEventListener('input', updateComposerPreview);
+
+    document.getElementById('chord-btn').addEventListener('click', () => {
+      if (chordMode && pendingChord.length > 0) {
+        appendChordToInput(pendingChord);
+        pendingChord = [];
+        chordMode = false;
+      } else if (chordMode) {
+        chordMode = false;
+        pendingChord = [];
+      } else {
+        chordMode = true;
+      }
+      updateChordStatus();
+      renderStaff();
+    });
+
+    document.getElementById('add-rest-btn').addEventListener('click', () => appendToInput('rest'));
+    document.getElementById('clear-btn').addEventListener('click', () => {
+      noteInput.value = '';
+      updateComposerPreview();
+    });
+
+    // ── MusicXML import ───────────────────────────────
+    const xmlStatus = document.getElementById('xml-status');
+
+    function setXmlStatus(html, type) {
+      xmlStatus.innerHTML = html;
+      xmlStatus.className = `ms-status ms-${type}`;
+    }
+
+    function populateComposer(keys) {
+      noteInput.value = keys.map(k => k === null ? 'rest' : NOTE_BY_KEY[k].token).join(' ');
+      updateComposerPreview();
+    }
+
+    const STEP_SEMITONE = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+    // First note for each MIDI value wins — naturals come first so they're canonical
+    const MIDI_TO_NOTE  = new Map();
+    NOTES.forEach(n => { if (!MIDI_TO_NOTE.has(n.midi)) MIDI_TO_NOTE.set(n.midi, n.key); });
+
+    function parseMusicXML(xmlText) {
+      const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
+      if (doc.querySelector('parsererror')) throw new Error('Invalid XML file.');
+
+      const keys = [];
+      let skippedRange = 0;
+
+      const part = doc.querySelector('part');
+      if (!part) throw new Error('No parts found in this file.');
+
+      part.querySelectorAll('note').forEach(note => {
+        if (note.querySelector('grace')) return;
+        if (note.querySelector('chord')) return;
+
+        if (note.querySelector('rest')) { keys.push(null); return; }
+
+        const step   = note.querySelector('step')?.textContent?.trim();
+        const octave = parseInt(note.querySelector('octave')?.textContent, 10);
+        const alter  = Math.round(parseFloat(note.querySelector('alter')?.textContent ?? '0'));
+        const midi   = (octave + 1) * 12 + (STEP_SEMITONE[step] ?? 0) + alter;
+
+        const noteKey = MIDI_TO_NOTE.get(midi);
+        if (!noteKey) { skippedRange++; return; }
+        keys.push(noteKey);
+      });
+
+      if (keys.filter(k => k !== null).length === 0) {
+        throw new Error('No notes in the C4–B5 range were found. The song may need transposing.');
+      }
+
+      populateComposer(keys);
+
+      const noteCount = keys.filter(k => k !== null).length;
+      const parts = [`Imported ${noteCount} note${noteCount !== 1 ? 's' : ''}.`];
+      if (skippedRange) parts.push(`${skippedRange} out-of-range note${skippedRange !== 1 ? 's' : ''} skipped (outside C4–B5).`);
+      setXmlStatus(parts.join(' '), 'ok');
+    }
+
+    function handleXmlFile(file) {
+      if (!file) return;
+      if (!file.name.endsWith('.xml')) {
+        setXmlStatus('Please choose an Uncompressed MusicXML (.xml) file.', 'error');
+        return;
+      }
+      document.getElementById('file-drop-text').textContent = file.name;
+      const reader = new FileReader();
+      reader.onload = e => {
+        try { parseMusicXML(e.target.result); }
+        catch (err) { setXmlStatus(err.message, 'error'); }
+      };
+      reader.readAsText(file);
+    }
+
+    document.getElementById('xml-file-input').addEventListener('change', e => {
+      handleXmlFile(e.target.files[0]);
+    });
+
+    // Drag-and-drop
+    const fileDrop = document.getElementById('file-drop');
+    fileDrop.addEventListener('dragover',  e => { e.preventDefault(); fileDrop.classList.add('drag-over'); });
+    fileDrop.addEventListener('dragleave', () => fileDrop.classList.remove('drag-over'));
+    fileDrop.addEventListener('drop', e => {
+      e.preventDefault();
+      fileDrop.classList.remove('drag-over');
+      handleXmlFile(e.dataTransfer.files[0]);
+    });
+
+    renderStaff();
+  </script>
+</body>
+</html>
