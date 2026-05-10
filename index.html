@@ -253,6 +253,11 @@
       'sol':'sol-w','la': 'la-w', 'ti': 'ti-w', 'do8': 'do8-w',
     };
 
+    // Reverse of SHARP_MAP: sharp key → natural staff-pitch key
+    const NATURAL_FOR_SHARP = Object.fromEntries(
+      Object.entries(SHARP_MAP).map(([nat, sharp]) => [sharp, nat])
+    );
+
     function svgEl(tag, attrs) {
       const el = document.createElementNS(SVG_NS, tag);
       for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
@@ -364,11 +369,13 @@
           } else {
             const keys = Array.isArray(n) ? n : [n];
             keys.forEach(key => {
-              const pitch = STAFF_PITCHES.find(p => p.key === key);
+              const baseKey = NATURAL_FOR_SHARP[key] ?? key;
+              const pitch   = STAFF_PITCHES.find(p => p.key === baseKey);
               if (!pitch) return;
-              const mat = NOTE_BY_KEY[key];
-              const ny  = ry + pitch.noteY;
-              (STAFF_LEDGERS[key] ?? []).forEach(ly => {
+              const mat    = NOTE_BY_KEY[key];
+              const ny     = ry + pitch.noteY;
+              const isSharp = baseKey !== key;
+              (STAFF_LEDGERS[baseKey] ?? []).forEach(ly => {
                 staffSvg.appendChild(svgEl('line', {
                   x1: nx - 9, y1: ry + ly, x2: nx + 9, y2: ry + ly,
                   stroke: 'var(--text-muted)', 'stroke-width': '1.2'
@@ -377,6 +384,16 @@
               staffSvg.appendChild(svgEl('ellipse', {
                 cx: nx, cy: ny, rx: 7, ry: 5, fill: mat.color, opacity: '0.9'
               }));
+              if (isSharp) {
+                const sharpEl = svgEl('text', {
+                  x: nx - 10, y: ny + 3,
+                  'text-anchor': 'middle', 'font-size': '9',
+                  fill: mat.color, 'pointer-events': 'none'
+                });
+                sharpEl.style.fontWeight = '900';
+                sharpEl.textContent = '♯';
+                staffSvg.appendChild(sharpEl);
+              }
             });
           }
         }
