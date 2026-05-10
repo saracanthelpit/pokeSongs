@@ -359,17 +359,6 @@
               staffSvg.appendChild(svgEl('ellipse', {
                 cx: nx, cy: ny, rx: 7, ry: 5, fill: mat.color, opacity: '0.9'
               }));
-              const arrow = DIR_ARROW[mat.dir];
-              if (arrow) {
-                const arrowEl = svgEl('text', {
-                  x: nx, y: ny + 3,
-                  'text-anchor': 'middle', 'font-size': '7',
-                  fill: '#111', 'pointer-events': 'none'
-                });
-                arrowEl.style.fontWeight = '800';
-                arrowEl.textContent = arrow;
-                staffSvg.appendChild(arrowEl);
-              }
             });
           }
         }
