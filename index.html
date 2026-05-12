@@ -362,10 +362,10 @@
           const n   = notes[i];
 
           if (n === null) {
-            // Rest: small filled rect on 4th line
+            // Whole-rest: thick bar hanging below the D5 line (y=49), standard treble position
             staffSvg.appendChild(svgEl('rect', {
-              x: nx - 4, y: ry + 25, width: 8, height: 6,
-              fill: 'var(--text-muted)', opacity: '0.5'
+              x: nx - 6, y: ry + 49, width: 12, height: 5,
+              fill: 'var(--text-muted)', opacity: '0.6', rx: '1'
             }));
           } else {
             const keys = Array.isArray(n) ? n : [n];
