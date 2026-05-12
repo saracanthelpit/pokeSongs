@@ -119,17 +119,18 @@
 
       <p class="sub-label">Import from MusicXML</p>
       <div class="musicxml-import">
-        <p class="import-hint">In MuseScore 4: <strong>File → Export → Uncompressed MusicXML (.xml)</strong></p>
+        <p class="import-hint">In MuseScore 4: <strong>File → Export → MusicXML (.mxl)</strong></p>
         <label class="file-drop" id="file-drop" for="xml-file-input">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <span id="file-drop-text">Drop .xml file here or click to browse</span>
-          <input type="file" id="xml-file-input" accept=".xml" />
+          <span id="file-drop-text">Drop .mxl or .xml file here or click to browse</span>
+          <input type="file" id="xml-file-input" accept=".mxl,.xml" />
         </label>
         <div id="xml-status" class="ms-status"></div>
       </div>
     </section>
   </main>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="app.js"></script>
   <script>
     const MAT_BY_KEY  = Object.fromEntries(MATS.map(m => [m.key, m]));
@@ -716,19 +717,47 @@
       setXmlStatus(parts.join(' '), 'ok');
     }
 
-    function handleXmlFile(file) {
+    async function handleXmlFile(file) {
       if (!file) return;
-      if (!file.name.endsWith('.xml')) {
-        setXmlStatus('Please choose an Uncompressed MusicXML (.xml) file.', 'error');
+      const isMxl = file.name.toLowerCase().endsWith('.mxl');
+      if (!isMxl && !file.name.toLowerCase().endsWith('.xml')) {
+        setXmlStatus('Please choose a MusicXML (.mxl or .xml) file.', 'error');
         return;
       }
       document.getElementById('file-drop-text').textContent = file.name;
-      const reader = new FileReader();
-      reader.onload = e => {
-        try { parseMusicXML(e.target.result); }
-        catch (err) { setXmlStatus(err.message, 'error'); }
-      };
-      reader.readAsText(file);
+      try {
+        let xmlText;
+        if (isMxl) {
+          setXmlStatus('Loading…', 'loading');
+          const buf = await file.arrayBuffer();
+          const zip = await JSZip.loadAsync(buf);
+
+          // Locate root MusicXML file via META-INF/container.xml
+          let mainName = null;
+          const containerFile = zip.file('META-INF/container.xml');
+          if (containerFile) {
+            const cxml = await containerFile.async('text');
+            const cdoc = new DOMParser().parseFromString(cxml, 'application/xml');
+            const rf   = cdoc.querySelector('rootfile');
+            if (rf) mainName = rf.getAttribute('full-path');
+          }
+
+          // Fallback: first .xml not in META-INF
+          if (!mainName) {
+            mainName = Object.keys(zip.files).find(n => n.endsWith('.xml') && !n.startsWith('META-INF/')) ?? null;
+          }
+
+          if (!mainName) throw new Error('No MusicXML content found inside .mxl archive.');
+          const entry = zip.file(mainName);
+          if (!entry) throw new Error(`Could not read ${mainName} from archive.`);
+          xmlText = await entry.async('text');
+        } else {
+          xmlText = await file.text();
+        }
+        parseMusicXML(xmlText);
+      } catch (err) {
+        setXmlStatus(err.message, 'error');
+      }
     }
 
     document.getElementById('xml-file-input').addEventListener('change', e => {
