@@ -35,6 +35,40 @@
     .staff-ind circle { transition: opacity 0.1s, r 0.1s; }
     .staff-ind:hover circle { opacity: 1 !important; r: 6.5; }
     .btn-sm.chord-active { border-color: var(--yellow); color: var(--yellow); }
+
+    #mat-count {
+      display: none;
+      flex-wrap: wrap;
+      gap: 0.4rem 1.1rem;
+      padding: 0.6rem 1rem;
+      background: var(--surface);
+      border: 1px solid var(--surface-2);
+      border-radius: var(--radius);
+      margin-top: 0.5rem;
+      align-items: center;
+    }
+    .mcount-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-muted);
+      margin-right: 0.25rem;
+      flex-basis: 100%;
+    }
+    .mcount-item {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .mcount-dot {
+      width: 11px; height: 11px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .mcount-n { font-weight: 700; color: var(--text); }
   </style>
 </head>
 <body>
@@ -115,6 +149,7 @@
           </div>
         </div>
         <div class="note-sequence" id="composer-preview"></div>
+        <div id="mat-count"></div>
       </div>
 
       <p class="sub-label">Import from MusicXML</p>
@@ -385,6 +420,16 @@
               staffSvg.appendChild(svgEl('ellipse', {
                 cx: nx, cy: ny, rx: 7, ry: 5, fill: mat.color, opacity: '0.9'
               }));
+              const arrowChar = DIR_ARROW[NOTE_BY_KEY[key].dir];
+              if (arrowChar) {
+                const arEl = svgEl('text', {
+                  x: nx, y: ny + 2.5, 'text-anchor': 'middle',
+                  'font-size': '6', fill: 'rgba(0,0,0,0.8)', 'pointer-events': 'none'
+                });
+                arEl.style.fontWeight = '900';
+                arEl.textContent = arrowChar;
+                staffSvg.appendChild(arEl);
+              }
               if (isSharp) {
                 const sharpEl = svgEl('text', {
                   x: nx - 10, y: ny + 3,
@@ -617,6 +662,30 @@
       return results;
     }
 
+    function updateMatCount() {
+      const matCountEl = document.getElementById('mat-count');
+      const notes = parseInputText(noteInput.value).filter(n => !(n && !Array.isArray(n) && typeof n === 'object'));
+      const counts = {};
+      notes.forEach(n => {
+        if (n === null) return;
+        (Array.isArray(n) ? n : [n]).forEach(key => {
+          const note = NOTE_BY_KEY[key];
+          if (note) counts[note.mat] = (counts[note.mat] || 0) + 1;
+        });
+      });
+      const usedMats = MATS.filter(m => counts[m.key]);
+      if (usedMats.length === 0) { matCountEl.style.display = 'none'; return; }
+      matCountEl.style.display = 'flex';
+      matCountEl.innerHTML = '<span class="mcount-label">Mat steps</span>' +
+        usedMats.map(m =>
+          `<div class="mcount-item">
+            <div class="mcount-dot" style="background:${m.color}"></div>
+            <span>${m.label}</span>
+            <span class="mcount-n">×${counts[m.key]}</span>
+          </div>`
+        ).join('');
+    }
+
     function updateComposerPreview() {
       const notes = parseInputText(noteInput.value);
       composerPreview.innerHTML = notes.map(n => {
@@ -625,6 +694,7 @@
         }
         return renderNote(n);
       }).join('');
+      updateMatCount();
       renderStaff();
     }
 
