@@ -753,38 +753,53 @@
       const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
       if (doc.querySelector('parsererror')) throw new Error('Invalid XML file.');
 
-      const keys = [];
-      let skippedRange = 0;
-
       const part = doc.querySelector('part');
       if (!part) throw new Error('No parts found in this file.');
+
+      const keys = [];
+      let shifted = 0;
 
       part.querySelectorAll('note').forEach(note => {
         if (note.querySelector('grace')) return;
         if (note.querySelector('chord')) return;
+
+        // Grand-staff scores (piano etc.) have <staff>1</staff> for treble
+        // and <staff>2</staff> for bass. Only import the top staff (melody).
+        const staffEl = note.querySelector('staff');
+        if (staffEl && staffEl.textContent.trim() !== '1') return;
 
         if (note.querySelector('rest')) { keys.push(null); return; }
 
         const step   = note.querySelector('step')?.textContent?.trim();
         const octave = parseInt(note.querySelector('octave')?.textContent, 10);
         const alter  = Math.round(parseFloat(note.querySelector('alter')?.textContent ?? '0'));
-        const midi   = (octave + 1) * 12 + (STEP_SEMITONE[step] ?? 0) + alter;
+        let   midi   = (octave + 1) * 12 + (STEP_SEMITONE[step] ?? 0) + alter;
 
-        const noteKey = MIDI_TO_NOTE.get(midi);
-        if (!noteKey) { skippedRange++; return; }
-        keys.push(noteKey);
+        if (!MIDI_TO_NOTE.has(midi)) {
+          // Octave-shift to nearest playable pitch (handles out-of-range notes and
+          // upper-octave sharps like F♯5 that have no mat equivalent)
+          let found = false;
+          for (let s = 12; s <= 36; s += 12) {
+            if (MIDI_TO_NOTE.has(midi + s)) { midi += s; found = true; break; }
+            if (MIDI_TO_NOTE.has(midi - s)) { midi -= s; found = true; break; }
+          }
+          if (!found) return;
+          shifted++;
+        }
+
+        keys.push(MIDI_TO_NOTE.get(midi));
       });
 
       if (keys.filter(k => k !== null).length === 0) {
-        throw new Error('No notes in the C4–B5 range were found. The song may need transposing.');
+        throw new Error('No playable notes found. Try a different transposition.');
       }
 
       populateComposer(keys);
 
       const noteCount = keys.filter(k => k !== null).length;
-      const parts = [`Imported ${noteCount} note${noteCount !== 1 ? 's' : ''}.`];
-      if (skippedRange) parts.push(`${skippedRange} out-of-range note${skippedRange !== 1 ? 's' : ''} skipped (outside C4–B5).`);
-      setXmlStatus(parts.join(' '), 'ok');
+      const msgs = [`Imported ${noteCount} note${noteCount !== 1 ? 's' : ''}.`];
+      if (shifted) msgs.push(`${shifted} note${shifted !== 1 ? 's' : ''} octave-shifted to fit the mat range.`);
+      setXmlStatus(msgs.join(' '), shifted ? 'warn' : 'ok');
     }
 
     async function handleXmlFile(file) {
