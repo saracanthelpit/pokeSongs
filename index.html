@@ -127,7 +127,7 @@
       </select>
 
       <p class="sub-label">Read from sheet music</p>
-      <p class="staff-guide-hint">Find the note on your printed sheet music, hover the matching position on the staff below, then click to add it to your sequence. Covers C4 (Low Do ↑) through C6 (High Do ↓↓) — all 15 natural notes across two octaves.</p>
+      <p class="staff-guide-hint">Find the note on your printed sheet music, click to add it to your sequence. Covers C4 (Low Do ↑) through C6 (High Do ↓↓) — all 15 natural notes across two octaves.</p>
       <div class="staff-wrap">
         <svg id="staff-svg" class="staff-svg"></svg>
         <div class="staff-controls">
@@ -595,7 +595,6 @@
       const current = noteInput.value.trimEnd();
       noteInput.value = current ? current + ' ' + token : token;
       updateComposerPreview();
-      noteInput.focus();
     }
 
     function appendChordToInput(keys) {
@@ -605,7 +604,6 @@
       const current = noteInput.value.trimEnd();
       noteInput.value = current ? current + ' [' + tokens + ']' : '[' + tokens + ']';
       updateComposerPreview();
-      noteInput.focus();
     }
 
     function updateChordStatus() {
