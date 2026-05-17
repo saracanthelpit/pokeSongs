@@ -118,6 +118,7 @@ section + section {
 /* ── Song select dropdown ────────────────────────── */
 #song-select {
   width: 100%;
+  margin-top: 1rem;
   padding: 0.6rem 0.9rem;
   margin-bottom: 1rem;
   background: var(--surface);
