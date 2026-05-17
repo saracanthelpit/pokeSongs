@@ -226,7 +226,7 @@
 
     // ── Staff (sheet music pitch input) ──────────────
     const SVG_NS = 'http://www.w3.org/2000/svg';
-    const S_ROW_H        = 128;  // taller to fit 2-octave range
+    const S_ROW_H        = 175;  // taller to fit 2-octave range
     const S_NOTES_PER_ROW = 11;
     const S_NOTE_X0      = 44;
     const S_NOTE_DX      = 24;
@@ -237,28 +237,28 @@
     // All 15 natural notes, C4–C6. Staff lines are now at y=35,49,63,77,91
     // (treble clef: F5 D5 B4 G4 E4, top→bottom). Ledger lines: A5(21), C4(105), C6(7+21).
     const STAFF_PITCHES = [
-      { key: 'do8-s', noteY: 7,   letter: 'C6', solLabel: "Do''" },
-      { key: 'ti-s',  noteY: 14,  letter: 'B5', solLabel: "Ti'"  },
-      { key: 'la-s',  noteY: 21,  letter: 'A5', solLabel: "La'"  },
-      { key: 'sol-s', noteY: 28,  letter: 'G5', solLabel: "Sol'" },
-      { key: 'fa-s',  noteY: 35,  letter: 'F5', solLabel: "Fa'"  },
-      { key: 'mi-s',  noteY: 42,  letter: 'E5', solLabel: "Mi'"  },
-      { key: 're-s',  noteY: 49,  letter: 'D5', solLabel: "Re'"  },
-      { key: 'do8',   noteY: 56,  letter: 'C5', solLabel: 'High Do' },
-      { key: 'ti',    noteY: 63,  letter: 'B4', solLabel: 'Ti'   },
-      { key: 'la',    noteY: 70,  letter: 'A4', solLabel: 'La'   },
-      { key: 'sol',   noteY: 77,  letter: 'G4', solLabel: 'Sol'  },
-      { key: 'fa',    noteY: 84,  letter: 'F4', solLabel: 'Fa'   },
-      { key: 'mi',    noteY: 91,  letter: 'E4', solLabel: 'Mi'   },
-      { key: 're',    noteY: 98,  letter: 'D4', solLabel: 'Re'   },
-      { key: 'do',    noteY: 105, letter: 'C4', solLabel: 'Low Do' },
+      { key: 'do8-s', noteY: 10,  letter: 'C6', solLabel: "Do''" },
+      { key: 'ti-s',  noteY: 20,  letter: 'B5', solLabel: "Ti'"  },
+      { key: 'la-s',  noteY: 30,  letter: 'A5', solLabel: "La'"  },
+      { key: 'sol-s', noteY: 40,  letter: 'G5', solLabel: "Sol'" },
+      { key: 'fa-s',  noteY: 50,  letter: 'F5', solLabel: "Fa'"  },
+      { key: 'mi-s',  noteY: 60,  letter: 'E5', solLabel: "Mi'"  },
+      { key: 're-s',  noteY: 70,  letter: 'D5', solLabel: "Re'"  },
+      { key: 'do8',   noteY: 80,  letter: 'C5', solLabel: 'High Do' },
+      { key: 'ti',    noteY: 90,  letter: 'B4', solLabel: 'Ti'   },
+      { key: 'la',    noteY: 100, letter: 'A4', solLabel: 'La'   },
+      { key: 'sol',   noteY: 110, letter: 'G4', solLabel: 'Sol'  },
+      { key: 'fa',    noteY: 120, letter: 'F4', solLabel: 'Fa'   },
+      { key: 'mi',    noteY: 130, letter: 'E4', solLabel: 'Mi'   },
+      { key: 're',    noteY: 140, letter: 'D4', solLabel: 'Re'   },
+      { key: 'do',    noteY: 150, letter: 'C4', solLabel: 'Low Do' },
     ];
 
     // Ledger lines drawn for notes outside the 5-line staff
     const STAFF_LEDGERS = {
-      'do8-s': [7, 21],  // C6: two ledger lines above
-      'la-s':  [21],     // A5: one ledger line above
-      'do':    [105],    // C4: one ledger line below
+      'do8-s': [10, 30],  // C6: two ledger lines above
+      'la-s':  [30],      // A5: one ledger line above
+      'do':    [150],     // C4: one ledger line below
     };
 
     const staffSvg    = document.getElementById('staff-svg');
@@ -357,7 +357,7 @@
         });
 
         // 5 staff lines: F5 D5 B4 G4 E4 (top→bottom)
-        [35, 49, 63, 77, 91].forEach(ly => {
+        [50, 70, 90, 110, 130].forEach(ly => {
           staffSvg.appendChild(svgEl('line', {
             x1: S_STAFF_X1, y1: ry + ly, x2: S_STAFF_X2, y2: ry + ly, class: 'staff-line'
           }));
@@ -381,9 +381,9 @@
           const n   = notes[i];
 
           if (n === null) {
-            // Whole-rest: thick bar hanging below the D5 line (y=49), standard treble position
+            // Whole-rest: thick bar hanging below the D5 line (y=70), standard treble position
             staffSvg.appendChild(svgEl('rect', {
-              x: nx - 6, y: ry + 49, width: 12, height: 5,
+              x: nx - 6, y: ry + 70, width: 12, height: 5,
               fill: 'var(--text-muted)', opacity: '0.6', rx: '1'
             }));
           } else {
@@ -433,7 +433,7 @@
           const cx = S_NOTE_X0 + cursorCol * S_NOTE_DX;
           staffSvg.appendChild(svgEl('line', {
             id: 'staff-cursor',
-            x1: cx, y1: ry + 6, x2: cx, y2: ry + S_ROW_H - 6,
+            x1: cx, y1: ry + 8, x2: cx, y2: ry + S_ROW_H - 8,
             stroke: 'var(--yellow)', 'stroke-width': '1.5',
             'stroke-dasharray': '4 3', opacity: '0.65'
           }));
@@ -447,7 +447,7 @@
         stroke: 'rgba(0,0,0,0.4)', 'stroke-width': '1.5', style: 'display:none'
       }));
       ghostGroup.appendChild(svgEl('ellipse', {
-        id: 'staff-ghost-head', cx: S_NOTE_X0, cy: 35, rx: 7, ry: 5, opacity: '0.85'
+        id: 'staff-ghost-head', cx: S_NOTE_X0, cy: 50, rx: 7, ry: 5, opacity: '0.85'
       }));
       staffSvg.appendChild(ghostGroup);
 
