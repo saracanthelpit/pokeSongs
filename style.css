@@ -435,7 +435,8 @@ section + section {
 }
 
 .rot-card {
-  background: var(--surface-2);
+  background: var(--surface);
+  border: 2px solid var(--surface-2);
   border-radius: 8px;
   padding: 0.7rem 1rem;
   display: flex;
@@ -446,7 +447,7 @@ section + section {
 .rot-arrow {
   font-size: 1.6rem;
   font-weight: 800;
-  color: var(--yellow);
+  color: var(--blue-mid);
   min-width: 1.4rem;
   text-align: center;
   line-height: 1;
