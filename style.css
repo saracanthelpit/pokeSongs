@@ -554,6 +554,24 @@ section + section {
   font-style: italic;
 }
 
+/* ── Footer ──────────────────────────────────────── */
+footer {
+  text-align: center;
+  padding: 1.5rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--surface-2);
+}
+
+footer a {
+  color: var(--text-muted);
+  text-decoration: underline;
+}
+
+footer a:hover {
+  color: var(--text);
+}
+
 /* ── Mobile ──────────────────────────────────────── */
 @media (max-width: 480px) {
   main {
