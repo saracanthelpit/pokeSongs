@@ -85,12 +85,6 @@
     </section>
 
     <section>
-      <h2 class="section-title">Sample Songs</h2>
-      <select id="song-select"></select>
-      <div class="song-list" id="song-list"></div>
-    </section>
-
-    <section>
       <h2 class="section-title">Song Converter</h2>
 
       <div class="rotation-guide">
@@ -127,6 +121,10 @@
         </div>
 
       </div>
+
+      <select id="song-select">
+        <option value="">— Load a sample song —</option>
+      </select>
 
       <p class="sub-label">Read from sheet music</p>
       <p class="staff-guide-hint">Find the note on your printed sheet music, hover the matching position on the staff below, then click to add it to your sequence. Covers C4 (Low Do ↑) through C6 (High Do ↓↓) — all 15 natural notes across two octaves.</p>
@@ -207,7 +205,6 @@
 
     // ── Sample songs ──────────────────────────────────
     const songSelect = document.getElementById('song-select');
-    const songList   = document.getElementById('song-list');
 
     SONGS.forEach((song, i) => {
       const opt = document.createElement('option');
@@ -218,27 +215,18 @@
 
     function renderSong(index) {
       const song = SONGS[index];
-      const seq = song.notes.map(n => renderNote(n, true)).join('');
-      songList.innerHTML = `
-        <div class="song-card">
-          <p class="click-hint">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M10 14L21 3M21 21H3V3"/></svg>
-            Click any note chip to add it to your sequence below
-          </p>
-          <div class="note-sequence">${seq}</div>
-        </div>`;
+      const tokens = song.notes.map(n => {
+        if (n === null) return 'rest';
+        if (Array.isArray(n)) return '[' + n.map(k => NOTE_BY_KEY[k].token).join(' ') + ']';
+        return NOTE_BY_KEY[n].token;
+      }).join(' ');
+      noteInput.value = tokens;
+      updateComposerPreview();
     }
 
-    songList.addEventListener('click', e => {
-      const chip = e.target.closest('.note-chip[data-key]');
-      if (!chip) return;
-      appendToInput(NOTE_BY_KEY[chip.dataset.key].token);
-      chip.classList.add('chip-added');
-      setTimeout(() => chip.classList.remove('chip-added'), 250);
+    songSelect.addEventListener('change', () => {
+      if (songSelect.value !== '') renderSong(+songSelect.value);
     });
-
-    songSelect.addEventListener('change', () => renderSong(+songSelect.value));
-    renderSong(0);
 
     // ── Staff (sheet music pitch input) ──────────────
     const SVG_NS = 'http://www.w3.org/2000/svg';
